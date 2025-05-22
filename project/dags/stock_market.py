@@ -5,7 +5,7 @@ from airflow.sensors.base import PokeReturnValue
 from airflow.hooks.base import BaseHook
 from airflow.providers.docker.operators.docker import DockerOperator
 
-from include.stock_market.tasks import _get_stock_prices, _store_prices
+from include.stock_market.tasks import _get_formatted_csv, _get_stock_prices, _store_prices
 
 
 SYMBOL = "NVDA"
@@ -59,6 +59,16 @@ def stock_market():
         }
     )
     
-    is_api_available() >> get_stock_prices >> store_prices >> format_prices
+    
+    get_formatted_csv = PythonOperator(
+        task_id = 'get_formatted_csv',
+        python_callable = _get_formatted_csv,
+        op_kwargs={
+            'path': '{{ti.xcom_pull(task_ids="store_prices")}}'
+        }
+        
+    )
+    
+    is_api_available() >> get_stock_prices >> store_prices >> format_prices >> get_formatted_csv
     
 stock_market()
